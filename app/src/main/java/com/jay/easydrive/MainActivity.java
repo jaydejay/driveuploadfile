@@ -1,15 +1,15 @@
 package com.jay.easydrive;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-import com.jay.easydrive.R;
 import android.widget.Button;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -19,33 +19,37 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccoun
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.DriveScopes;;
-
+import com.google.api.services.drive.DriveScopes;
 
 import java.util.Collections;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private static final int RC_SIGN_IN = 1;
     private static final int MY_PERMISSIONS_REQUEST_SEND_SMS = 2;
+    public static final String STORAGE_PATH = "/storage/emulated/0/";
+    public static final String DRIVE_FILE_NAME = "gestioncredit.db";
     private  NetHttpTransport transport ;
     private static final GsonFactory JSON_FACTORY = new GsonFactory();
     private DriveServiceHelper driveServiceHelper;
     private PreferedServiceHelper preferedServiceHelper;
-     Button update_button;
+    Button update_button;
+    Button restore_button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         update_button = findViewById(R.id.btnupload);
+        restore_button = findViewById(R.id.btnrestore);
        preferedServiceHelper = new PreferedServiceHelper(this);
         transport = new NetHttpTransport();
 
         launchsignInIntent();
-        updateDriveFile();
+        mainUploadMethod();
+        mainRestoreMethod();
 
-//        uploadFileToDrive();
     }
 
 
@@ -72,11 +76,10 @@ public class MainActivity extends AppCompatActivity {
             GoogleSignInClient googleSignInClient = GoogleSignIn.getClient(this, gso);
 
             Intent signInIntent = googleSignInClient.getSignInIntent();
-            startActivityForResult(signInIntent, RC_SIGN_IN);
+            startActivityForResult(signInIntent,RC_SIGN_IN);
         }
 
     }
-
 
 
 //### 4. Handle the Sign-In Result
@@ -88,7 +91,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (requestCode == RC_SIGN_IN) {
             if (resultCode == RESULT_OK){
-
                 handleSignInResult(data);
             }
 
@@ -107,10 +109,6 @@ public class MainActivity extends AppCompatActivity {
                     .build();
 
             driveServiceHelper = new DriveServiceHelper(driveService, preferedServiceHelper);
-            String drive_file_id = preferedServiceHelper.getDriveSession();
-            if (drive_file_id.length() == 0){
-                uploadFileToDrive();
-            }
 
         }).addOnFailureListener(e -> {
 
@@ -119,43 +117,57 @@ public class MainActivity extends AppCompatActivity {
     }
  //### end 4. Handle the Sign-In Result
 
-//    ### 5. Use the Signed-In Account to Access Google Drive
-//    Once signed in, you can use the authenticated account to make API calls to Google Drive:
-//    private HttpRequestInitializer getGoogleAccountCredential( GoogleSignInAccount account) {
-//
-//        GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(
-//                this, Collections.singleton(DriveScopes.DRIVE_FILE));
-//        credential.setSelectedAccount(account.getAccount());
-//
-//        return credential;
-//    }
-
-    private void uploadFileToDrive()  {
-        String monfichier = new java.io.File("/storage/emulated/0/", "gestioncredit.db").getPath();
-        driveServiceHelper.createFile(monfichier)
-                .addOnSuccessListener(s -> {
-                    Log.d("uploadFileToDrivesuccess", "upload File To Drive succed ");
-                    Log.d("uploadFileToDrivesuccess", "upload File id "+s.getId());
-                    preferedServiceHelper.saveDriveSession(s.getId());
-                }).addOnFailureListener(e -> Log.d("uploadFileToDrivefailled", "upload File To Drive failled "));
+    private void uploadFileToDrive() {
+        String mon_fichier = new java.io.File(STORAGE_PATH, DRIVE_FILE_NAME).getPath();
+        driveServiceHelper.createFile(mon_fichier)
+                .addOnSuccessListener(s -> preferedServiceHelper.saveDriveSession(s.getId())).addOnFailureListener(e -> Log.d("uploadFileToDrivefailled", "upload File To Drive failled "));
 
     }
+
 
 
     private void updateDriveFile()  {
 
         update_button.setOnClickListener(v -> {
-            String monfichier = new java.io.File("/storage/emulated/0/", "gestioncredit.db").getPath();
+            String monfichier = new java.io.File(STORAGE_PATH, DRIVE_FILE_NAME).getPath();
             driveServiceHelper.updateFile(monfichier)
-                    .addOnSuccessListener(s -> {
-                        Log.d("updateFilesuccess", "update File To Drive succed ");
-                        Log.d("updateFilesuccess", "upload File id "+s.getId());
-//                        preferedServiceHelper.saveDriveSession(s.getId());
-                    }).addOnFailureListener(e -> Log.d("updateFilefailled", "update File To Drive failled "));
+                    .addOnSuccessListener(s -> Log.d("updateFilesuccess", "update File To Drive succed ")).addOnFailureListener(e -> Log.d("updateFilefailled", "update File To Drive failled "));
 
         });
 
 
+    }
+
+    public void mainUploadMethod(){
+
+        update_button.setOnClickListener(v -> {
+            String drive_file_id = preferedServiceHelper.getDriveSession();
+            if (drive_file_id.length() == 0){
+                uploadFileToDrive();
+
+            }else {
+                updateDriveFile();
+            }
+        });
+
+    }
+
+    public void mainRestoreMethod(){
+
+        restore_button.setOnClickListener(v -> {
+            String drive_file_id = preferedServiceHelper.getDriveSession();
+            if (drive_file_id.length() != 0){
+             retiveFileToDrive(drive_file_id);
+
+            }
+        });
+
+    }
+
+    private void retiveFileToDrive(String drive_file_id) {
+        driveServiceHelper.retriveFile(drive_file_id)
+                .addOnSuccessListener(s -> Toast.makeText(this, "donnees restorees", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->Toast.makeText(this, "echec dla restoration", Toast.LENGTH_SHORT).show());
     }
 
 

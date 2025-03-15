@@ -7,7 +7,7 @@ public class PreferedServiceHelper {
     private static final String DRIVE_FILE_ID = "drive_file_id";
     private final SharedPreferences sharedPreferences;
     private final String DRIVE_SHARED_PREF_NAME ="drive_uploaded_data";
-    private SharedPreferences.Editor editor;
+    private final SharedPreferences.Editor editor;
 
     public PreferedServiceHelper(Context context) {
 
@@ -23,7 +23,4 @@ public class PreferedServiceHelper {
         return sharedPreferences.getString(DRIVE_FILE_ID,"");
     }
 
-//    public void removeSession(){
-//        editor.remove("is_drive_uploaded").commit();
-//    }
 }

@@ -8,13 +8,18 @@ import com.google.api.client.http.FileContent;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class DriveServiceHelper {
-    private Drive mdriveservice;
-    private PreferedServiceHelper preferedServiceHelper;
+    private final Drive mdriveservice;
+    private final PreferedServiceHelper preferedServiceHelper;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
 
@@ -49,6 +54,32 @@ public class DriveServiceHelper {
 
     }
 
+    public Task<ByteArrayOutputStream> retriveFile(String fileid){
+
+        return Tasks.call(executor,()->{
+
+            OutputStream outStream;
+
+            try {
+
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    outStream = Files.newOutputStream(Paths.get("/storage/emulated/0/gestioncreditdownload.db"));
+                    mdriveservice.files().get(fileid).executeMediaAndDownloadTo(outStream);
+                }else {
+                    outStream = new FileOutputStream("/storage/emulated/0/gestioncreditdownload.db");
+                    mdriveservice.files().get(fileid).executeMediaAndDownloadTo(outStream);
+
+                }
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return (ByteArrayOutputStream) outStream;
+        });
+
+    }
+
+
     public Task<File> updateFile(String path){
 
         return Tasks.call(executor,()->{
@@ -76,4 +107,7 @@ public class DriveServiceHelper {
         });
 
     }
+
+
+
 }
